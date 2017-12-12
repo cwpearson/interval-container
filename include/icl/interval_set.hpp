@@ -26,6 +26,7 @@ class IntervalSet {
   typedef std::map<Endpoint, ptr_type> map_type;
 
   class iterator {
+    friend class IntervalSet;
   public:
     iterator(const typename map_type::iterator lb, const typename map_type::iterator &ub) : lb_(lb), ub_(ub) {}
     RECORD &operator*() {
@@ -255,8 +256,14 @@ iterator find(const key_type &k) {
   return find_between(kLowerEnd, kUpperEnd);
 }
 
-size_type erase(const value_type &val) {
-  assert(0);
+size_type erase(const key_type &k) {
+  auto i = find(k);
+  if (i != end()) {
+    map_.erase(i.lb_);
+    map_.erase(i.ub_);
+    return 1;
+  }
+  return 0;
 }
 
 static Endpoint lower_endpoint(int64_t i) {

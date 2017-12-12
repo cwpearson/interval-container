@@ -81,4 +81,25 @@ int main(void) {
   assert(2 == *s.find(i2));
   std::cerr << "pass 5\n\n";
 }
+
+  {
+  std::cerr << "run 6...\n";
+  Interval<int> i0(1, 2), i1(0,1), i2(2,3);
+  IntervalSet<Interval<int>, double> s;
+  s.insert(i0, 0);
+  assert(s.erase(i0));
+  assert(s.size() == 0);
+  std::cerr << "pass 6\n\n";
+  }
+
+  {
+  std::cerr << "run 7...\n";
+  Interval<int> i0(1, 2), i1(1,19), i2(4,11);
+  IntervalSet<Interval<int>, double> s;
+  s.insert(i0, 0);
+  s.insert(i1, 9);
+  assert(s.erase(i2));
+  assert(s.size() == 0);
+  std::cerr << "pass 7\n\n";
+  }
 }
