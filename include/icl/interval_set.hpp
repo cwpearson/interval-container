@@ -27,7 +27,7 @@ class IntervalSet {
 
   class iterator {
   public:
-    iterator(const map_type m, const typename map_type::iterator lb, const typename map_type::iterator &ub) : m_(m), lb_(lb), ub_(ub) {}
+    iterator(const typename map_type::iterator lb, const typename map_type::iterator &ub) : lb_(lb), ub_(ub) {}
     RECORD &operator*() {
       return *(lb_->second);
     }
@@ -48,7 +48,6 @@ class IntervalSet {
 
 
   private:
-    const map_type m_;
     typename map_type::iterator lb_;
     typename map_type::iterator ub_;
   };
@@ -108,7 +107,7 @@ private:
       return end();
     }
     if (lteI->first.second == 1 && gtI->first.second == -1) {
-      return iterator(map_,lteI, gtI);
+      return iterator(lteI, gtI);
     } else {
       return end();
     }
@@ -116,11 +115,8 @@ private:
   }
 
   iterator find_between(const Endpoint &l, const Endpoint &u) {
-    std::cerr << "(find_between)\n";
     auto ltI = lte(u);
     auto gteI = map_.lower_bound(l);
-
-
 
     if (ltI == map_.end()) {
       return end();
@@ -128,8 +124,9 @@ private:
     if (gteI == map_.end()) {
       return end();
     }
+
     if (gteI->first.second == 1 && ltI->first.second == -1) {
-      return iterator(map_, gteI, ltI);
+      return iterator(gteI, ltI);
     } else {
       return end();
     }
@@ -238,7 +235,7 @@ public:
 
 
 iterator end() {
-  return iterator(map_, map_.end(), map_.end());
+  return iterator(map_.end(), map_.end());
 }
 
 iterator find(const key_type &k) {
@@ -256,7 +253,6 @@ iterator find(const key_type &k) {
   }
 
   return find_between(kLowerEnd, kUpperEnd);
-
 }
 
 size_type erase(const value_type &val) {
