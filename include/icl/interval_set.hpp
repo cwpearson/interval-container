@@ -259,8 +259,21 @@ std::pair<iterator, bool> insert_split(const key_type &k) {
 
     auto newK = ptr_type(new key_type(k));
 
-    auto newL = map_.insert(std::make_pair(kLowerEnd, newK)).first;
-    auto newU = map_.insert(std::make_pair(kUpperEnd, newK)).first;
+    auto p = map_.insert(std::make_pair(kLowerEnd, newK));
+    auto newL = p.first;
+    if (!p.second) { // not inserted
+      newL->second->set_lower(k.lower());
+      newL->second->set_upper(k.upper());
+    }
+    p = map_.insert(std::make_pair(kUpperEnd, newK));
+    auto newU = p.first;
+    if (!p.second) { // not inserted
+      newU->second->set_lower(k.lower());
+      newU->second->set_upper(k.upper());
+    }
+
+
+
 
     bool inserted = false;
 
@@ -309,6 +322,13 @@ iterator end() {
 }
 
 iterator find(const key_type &k) {
+
+      std::cerr << "(find) current map:\n";
+    int cnt = 0;
+    for (const auto &i : map_) {
+      std::cerr << i.first.first << "(" << i.first.second << ") ";
+      if (cnt++ %2) std::cerr <<"\n";
+    }
 
   assert(map_.size() % 2 == 0);
 
