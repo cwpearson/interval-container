@@ -16,6 +16,7 @@
 typedef int Direction;
 
 // INTERVAL must have ::pos_type, type lower(), type upper(), bool operator<()
+// When intervals overlap, they are joined
 template<typename INTERVAL>
 class IntervalSet {
   typedef INTERVAL key_type;
@@ -167,14 +168,14 @@ private:
 public:
   size_t size() { assert(map_.size() % 2 == 0); return map_.size() / 2; }
 
-  std::pair<iterator, bool> insert(const key_type &k) {
+  std::pair<iterator, bool> insert_join(const key_type &k) {
 
-    std::cerr << "Insert: current map:\n";
-    int cnt = 0;
-    for (const auto &i : map_) {
-      std::cerr << i.first.first << "(" << i.first.second << ") ";
-      if (cnt++ %2) std::cerr <<"\n";
-    }
+    // std::cerr << "(insert_join) current map:\n";
+    // int cnt = 0;
+    // for (const auto &i : map_) {
+    //   std::cerr << i.first.first << "(" << i.first.second << ") ";
+    //   if (cnt++ %2) std::cerr <<"\n";
+    // }
 
     const auto kUpperEnd = make_upper(k.upper());
     const auto kLowerEnd = make_lower(k.lower());
@@ -182,7 +183,7 @@ public:
     auto small = map_.insert(std::make_pair(kLowerEnd, ptr_type(nullptr))).first;
     auto large = map_.insert(std::make_pair(kUpperEnd, ptr_type(nullptr))).first;
 
-    std::cerr << "inserted\n";
+    // std::cerr << "inserted\n";
 
     // find smallest endpoint facing +1 lte kLowerEnd
     if (small != map_.begin()) {
@@ -193,7 +194,7 @@ public:
       }
     }
 
-    std::cerr << "small = " << small->first.first << "\n";
+    // std::cerr << "small = " << small->first.first << "\n";
 
     // find the largest endpoint facing -1 gte kUpperEnd
     auto larger = large;
@@ -205,7 +206,7 @@ public:
     }
   
 
-    std::cerr << "large = " << large->first.first << "\n";
+    // std::cerr << "large = " << large->first.first << "\n";
     bool inserted = false;
 
     // Adjust the values of the new interval to be that of the overlapped
@@ -236,7 +237,7 @@ public:
     }
     
     for (const auto &i : toErase) {
-      std::cerr << "erasing " << i->first.first << "\n";
+      // std::cerr << "erasing " << i->first.first << "\n";
       map_.erase(i);
     }
     assert(map_.size() % 2 == 0);
@@ -244,6 +245,64 @@ public:
     return std::make_pair(res, inserted);
 }
 
+std::pair<iterator, bool> insert_split(const key_type &k) {
+
+      std::cerr << "(insert_split) current map:\n";
+    int cnt = 0;
+    for (const auto &i : map_) {
+      std::cerr << i.first.first << "(" << i.first.second << ") ";
+      if (cnt++ %2) std::cerr <<"\n";
+    }
+
+    const auto kUpperEnd = make_upper(k.upper());
+    const auto kLowerEnd = make_lower(k.lower());
+
+    auto newK = ptr_type(new key_type(k));
+
+    auto newL = map_.insert(std::make_pair(kLowerEnd, newK)).first;
+    auto newU = map_.insert(std::make_pair(kUpperEnd, newK)).first;
+
+    bool inserted = false;
+
+    // find largest endpoint facing +1 lt kLowerEnd
+    auto smaller = newL;
+    if (smaller != map_.begin()) {
+      inserted = true;
+      smaller--;
+      if (smaller->first.second == 1) { // truncate existing interval
+         smaller->second->set_upper(k.lower());
+         map_.insert(std::make_pair(make_upper(k.lower()), smaller->second));
+      }
+    }
+
+    // find smallest endpoint facing -1 gt kUpperEnd
+    auto bigger = newU;
+    ++bigger;
+    if (bigger != map_.end() ) {
+      if (bigger->first.second == -1) { // truncate existing interval
+         inserted = true;
+         bigger->second->set_lower(k.upper());
+         map_.insert(std::make_pair(make_lower(k.upper()), bigger->second));
+      }
+    }
+
+    iterator res(newL, newU);
+
+    // erase all endpoints between the new insertion
+    std::vector<typename map_type::iterator> toErase;
+    while (++newL != newU) {
+      toErase.push_back(newL);
+    }
+    
+    for (const auto &i : toErase) {
+      std::cerr << "erasing " << i->first.first << "\n";
+      map_.erase(i);
+    }
+    assert(map_.size() % 2 == 0);
+
+
+  return std::make_pair(res, inserted); 
+}
 
 iterator end() {
   return iterator(map_.end(), map_.end());
