@@ -52,24 +52,28 @@ int main(void) {
   assert(1 == *s.find(i4));
   assert(1 == *s.find(i2));
   assert(s.end() == s.find(i3));
-
   std::cerr << "pass 4\n\n";
 }
-/*  
-  Interval<int> i2(2, 4);
-  Interval<int> i3(1, 3);
-  IntervalSet<Interval<int>, double> s1;
-  s1.insert(i1, 1);
-  assert(s1.size() == 1);
-  s1.insert(i2, 2);
-   assert(s1.size() == 2);
-  s1.insert(i3, 3);
-   assert(s1.size() == 1);
 
-  Interval<int> i4(1,2);
-  Interval<int> i5(0,3);
-  IntervalSet<Interval<int>, double> s2;
-  s2.insert(i4, 4);
-  s2.insert(i5, 5);
-  */
+{  
+  std::cerr << "run 5...\n";
+  IntervalSet<Interval<int>, double> s;
+  Interval<int> i0(1,3), i1(3,5), i2(2,4);
+  s.insert(i0, 0);
+  assert(s.size() == 1);
+  assert(0 == *s.find(i0));
+  assert(0 == *s.find(i2));
+  assert(s.end() == s.find(i1));
+  s.insert(i1, 1);
+  assert(s.size() == 2);
+  assert(0 == *s.find(i0));
+  assert(1 == *s.find(i1));
+  assert(0 == *s.find(i2) || 1 == *s.find(i2));
+  s.insert(i2, 2);
+  assert(s.size() == 1);
+  assert(2 == *s.find(i0));
+  assert(2 == *s.find(i1));
+  assert(2 == *s.find(i2));
+  std::cerr << "pass 5\n\n";
+}
 }
