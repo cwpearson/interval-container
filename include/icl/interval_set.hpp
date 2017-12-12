@@ -97,6 +97,8 @@ private:
 
   }
 
+
+
   iterator find(const Endpoint &e) {
     auto lteI = lte(e);
     auto gtI = map_.upper_bound(e);
@@ -114,6 +116,8 @@ private:
     }
 
   }
+
+
 
   iterator find_between(const Endpoint &l, const Endpoint &u) {
     auto ltI = lte(u);
@@ -329,6 +333,10 @@ std::pair<iterator, bool> insert_split(const key_type &k) {
 iterator end() {
   return iterator(map_.end(), map_.end());
 }
+
+  iterator find(const typename INTERVAL::pos_type &p) {
+    return find(make_lower(p));
+  }
 
 iterator find(const key_type &k) {
 
