@@ -15,13 +15,13 @@
 
 typedef int Direction;
 
-// INTERVAL must have ::type, type lower(), type upper(), bool operator<()
+// INTERVAL must have ::pos_type, type lower(), type upper(), bool operator<()
 template<typename INTERVAL>
 class IntervalSet {
   typedef INTERVAL key_type;
   typedef size_t size_type;
   typedef std::shared_ptr<INTERVAL> ptr_type;
-  typedef std::pair<typename INTERVAL::type, Direction> Endpoint;
+  typedef std::pair<typename INTERVAL::pos_type, Direction> Endpoint;
   typedef std::map<Endpoint, ptr_type> map_type;
 
   class iterator {

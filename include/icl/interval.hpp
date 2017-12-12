@@ -12,6 +12,7 @@ private:
   T upper_;
 
 public:
+  typedef T pos_type;
   typedef T type;
   Interval(const T &lower, const T &upper) : lower_(lower), upper_(upper) {}
 
