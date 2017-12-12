@@ -2,8 +2,8 @@
 // Created by pearson on 12/8/17.
 //
 
-#ifndef INTERVAL_CONTAINER_INTERVAL_SET_HPP
-#define INTERVAL_CONTAINER_INTERVAL_SET_HPP
+#ifndef INTERVAL_CONTAINER_INTERVAL_MAP_HPP
+#define INTERVAL_CONTAINER_INTERVAL_MAP_HPP
 
 #include <utility>
 #include <map>
@@ -16,19 +16,20 @@
 typedef int Direction;
 
 // INTERVAL must have ::type, type lower(), type upper(), bool operator<()
-template<typename INTERVAL>
-class IntervalSet {
+template<typename INTERVAL, typename RECORD>
+class IntervalMap {
   typedef INTERVAL key_type;
+  typedef RECORD value_type;
   typedef size_t size_type;
-  typedef std::shared_ptr<INTERVAL> ptr_type;
+  typedef std::shared_ptr<RECORD> ptr_type;
   typedef std::pair<typename INTERVAL::type, Direction> Endpoint;
   typedef std::map<Endpoint, ptr_type> map_type;
 
   class iterator {
-    friend class IntervalSet;
+    friend class IntervalMap;
   public:
     iterator(const typename map_type::iterator lb, const typename map_type::iterator &ub) : lb_(lb), ub_(ub) {}
-    const INTERVAL &operator*() { // FIXME - const?
+    RECORD &operator*() {
       return *(lb_->second);
     }
     bool operator==(const iterator &rhs) const noexcept {
@@ -167,12 +168,12 @@ private:
 public:
   size_t size() { assert(map_.size() % 2 == 0); return map_.size() / 2; }
 
-  std::pair<iterator, bool> insert(const key_type &k) {
+  std::pair<iterator, bool> insert(const key_type &k, const value_type &v) {
 
     std::cerr << "Insert: current map:\n";
     int cnt = 0;
     for (const auto &i : map_) {
-      std::cerr << i.first.first << "(" << i.first.second << ") ";
+      std::cerr << i.first.first << "(" << i.first.second << ")=" << *i.second << " ";
       if (cnt++ %2) std::cerr <<"\n";
     }
 
@@ -206,28 +207,19 @@ public:
   
 
     std::cerr << "large = " << large->first.first << "\n";
-    bool inserted = false;
 
-    // Adjust the values of the new interval to be that of the overlapped
-    INTERVAL newK = k;
-    newK.set_lower(small->first.first);
-    newK.set_upper(large->first.first);
-
-    // update those endpoints to point at the new interval
+    // update those endpoints to v
     if (small->second) {
-      *(small->second) = newK;
+      *(small->second) = v;
       large->second = small->second;
     } else if (large->second) {
-      *(large->second) = newK;
+      *(large->second) = v;
       small->second = large->second;
     } else {
-      auto newRecord = ptr_type(new key_type(newK));
+      auto newRecord = ptr_type(new RECORD(v));
       large->second = newRecord;
       small->second = newRecord;
-      inserted = true;
     }
-
-    iterator res(small, large);
 
     // erase all endpoints between
     std::vector<typename map_type::iterator> toErase;
@@ -239,9 +231,7 @@ public:
       std::cerr << "erasing " << i->first.first << "\n";
       map_.erase(i);
     }
-    assert(map_.size() % 2 == 0);
 
-    return std::make_pair(res, inserted);
 }
 
 
@@ -250,8 +240,6 @@ iterator end() {
 }
 
 iterator find(const key_type &k) {
-
-  assert(map_.size() % 2 == 0);
 
   const auto kUpperEnd = make_upper(k.upper());
   const auto kLowerEnd = make_lower(k.lower());

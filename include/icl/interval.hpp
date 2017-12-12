@@ -17,6 +17,8 @@ public:
 
   const T &lower() const noexcept { return lower_; }
   const T &upper() const noexcept { return upper_; }
+  void set_lower(const T &lower) {lower_ = lower; }
+  void set_upper(const T &upper) {upper_ = upper; }
 
   // template <typename T>
   bool operator<(const Interval<T> &rhs) const noexcept {
@@ -24,6 +26,10 @@ public:
       return upper_ < rhs.upper_;
     }
     return lower_ < rhs.lower_;
+  }
+
+  bool operator==(const Interval<T> &rhs) const noexcept {
+    return lower_ == rhs.lower_ && upper_ == rhs.upper_;
   }
 };
 
