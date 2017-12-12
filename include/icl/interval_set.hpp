@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <iostream>
 #include <cassert>
+#include <vector>
 
 typedef int Direction;
 
@@ -60,32 +61,34 @@ private:
   //   }
   //   return false;
   // }
-
+// return if lower is <= e and upper end is > e
   typename map_type::iterator enclosed_by_lower(const Endpoint &e) {
-
-    // assert(--map_.begin() == map_.end());
 
     std::cerr << "Looking for lower of " << e.first << "\n";
 
-    auto containingLower = map_.lower_bound(e); // >= e, or last
-    if (containingLower == map_.end()) {
+    auto gteE = map_.lower_bound(e);
+    if (gteE == map_.end()) {
       std::cerr << "no lb\n";
-      return containingLower;
+      return gteE;
     }
-
-    if (containingLower == map_.begin()) {
+    if (gteE == map_.begin()) {
       std::cerr << "lb is first map element\n";
-      return containingLower;
+      return gteE;
     }
 
-    --containingLower;
-    std::cerr << "found candidate " << containingLower->first.first << "\n";
-    if (containingLower->first.second == -1) { // points away from e
-      std::cerr << "candidate points in wrong dir " << containingLower->first.first << "\n";
+    auto ltE = gteE;
+    --ltE;
+    std::cerr << "found candidate " << ltE->first.first << "\n";
+    if (ltE->first.second == -1) { // points away from e
+      std::cerr << "candidate points in wrong dir " << ltE->first.first << "\n";
+      return map_.end();
+    }
+    if (gteE == e) {
+      std::cerr << "upper bound eqal " << gteE->first.first << "\n";
       return map_.end();
     }
 
-    return containingLower;
+    return ltE;
   }
 
 public:
@@ -96,49 +99,64 @@ public:
     std::cerr << "Insert: current map:\n";
     int cnt = 0;
     for (const auto &i : map_) {
-      std::cerr << i.first.first << "(" << i.first.second << ") ";
+      std::cerr << i.first.first << "(" << i.first.second << ")=" << *i.second << " ";
       if (cnt++ %2) std::cerr <<"\n";
     }
 
     const auto kUpperEnd = make_upper(k.upper());
     const auto kLowerEnd = make_lower(k.lower());
 
-    // Find any interval that encloses our lower bound
-    auto enclosingLowerI = enclosed_by_lower(kLowerEnd);
-    if (map_.end() != enclosingLowerI) {
+    auto small = map_.insert(std::make_pair(kLowerEnd, ptr_type(nullptr))).first;
+    auto large = map_.insert(std::make_pair(kUpperEnd, ptr_type(nullptr))).first;
 
-      // point that endpoint at the new value
-      std::cerr << "Lower enclosed by [" << enclosingLowerI->first.first << ", ...]\n";
-      *enclosingLowerI->second = v;
+    std::cerr << "inserted\n";
 
-      // find the corresponding upper endpoint
-      auto enclosingUpperI = ++enclosingLowerI;
-      assert(enclosingUpperI != map_.end());
-      if (kUpperEnd > enclosingUpperI->first) { // if the new endpoint is bigger, erase orginal
-      auto tmp = enclosingUpperI->second;
-      *tmp = v;
-        map_.erase(enclosingUpperI);
-        map_[kUpperEnd] = tmp;
-      } else {
-        *enclosingUpperI->second = v;
+    // find smallest endpoint facing +1 lte kLowerEnd
+    if (small != map_.begin()) {
+      auto smaller = small;
+      smaller--;
+      if (smaller->first.second == 1) {
+        small = smaller;
       }
-    } else {
-      std::cerr << "no overlapping interval\n";
-      map_[kLowerEnd] = ptr_type(new RECORD(v));
-      map_[kUpperEnd] = map_[kLowerEnd];
     }
 
+    std::cerr << "small = " << small->first.first << "\n";
 
-
-    // Find any interval we entirely subsume and erase
-    auto containedUpper = map_.lower_bound(kUpperEnd);
-    auto containedLower = map_.upper_bound(kLowerEnd);
-    if (containedLower != map_.end() && containedUpper != map_.end()) {
-      if (containedLower->first != make_lower(k.lower()) && containedUpper->first != make_upper(k.upper())) {
-        map_.erase(containedLower);
-        map_.erase(containedUpper);
+    // find the largest endpoint facing -1 gte kUpperEnd
+    auto larger = large;
+    larger++;
+    if (larger != map_.end()) {
+      if (larger->first.second == -1) {
+        large = larger;
       }
-    } 
+    }
+  
+
+    std::cerr << "large = " << large->first.first << "\n";
+
+    // update those endpoints to v
+    if (small->second) {
+      *(small->second) = v;
+      large->second = small->second;
+    } else if (large->second) {
+      *(large->second) = v;
+      small->second = large->second;
+    } else {
+      auto newRecord = ptr_type(new RECORD(v));
+      large->second = newRecord;
+      small->second = newRecord;
+    }
+
+    // erase all endpoints between
+    std::vector<typename map_type::iterator> toErase;
+    while (++small != large) {
+      toErase.push_back(small);
+    }
+    
+    for (const auto &i : toErase) {
+      std::cerr << "erasing " << i->first.first << "\n";
+      map_.erase(i);
+    }
 
 }
 
