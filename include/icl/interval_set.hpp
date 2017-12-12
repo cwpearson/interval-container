@@ -56,11 +56,11 @@ class IntervalSet {
 private:
   map_type map_;
 
-  static Endpoint make_lower(const typename INTERVAL::type &i) {
+  static Endpoint make_lower(const typename INTERVAL::pos_type &i) {
     return Endpoint(i, 1);
   }
 
-    static Endpoint make_upper(const typename INTERVAL::type &i) {
+    static Endpoint make_upper(const typename INTERVAL::pos_type &i) {
     return Endpoint(i, -1);
   }
 
@@ -166,7 +166,7 @@ private:
   }
 
 public:
-  size_t size() { assert(map_.size() % 2 == 0); return map_.size() / 2; }
+  size_type size() const { assert(map_.size() % 2 == 0); return map_.size() / 2; }
 
   std::pair<iterator, bool> insert_join(const key_type &k) {
 
