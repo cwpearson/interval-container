@@ -69,6 +69,11 @@ int main(void) {
   assert(0 == *s.find(i0));
   assert(1 == *s.find(i1));
   assert(0 == *s.find(i2) || 1 == *s.find(i2));
+
+  auto ii = s.find(i0);
+  auto jj = s.find(i1);
+  assert(++ii == jj);
+
   s.insert(i2, 2);
   assert(s.size() == 1);
   assert(2 == *s.find(i0));

@@ -15,7 +15,7 @@
 
 typedef int Direction;
 
-// INTERVAL must have ::type, type lower(), type upper();
+// INTERVAL must have ::type, type lower(), type upper(), bool operator<()
 template<typename INTERVAL, typename RECORD>
 class IntervalSet {
   typedef INTERVAL key_type;
