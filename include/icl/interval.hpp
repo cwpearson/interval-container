@@ -12,10 +12,19 @@ private:
   T upper_;
 
 public:
+  typedef T type;
   Interval(const T &lower, const T &upper) : lower_(lower), upper_(upper) {}
 
   const T &lower() const noexcept { return lower_; }
   const T &upper() const noexcept { return upper_; }
+
+  // template <typename T>
+  bool operator<(const Interval<T> &rhs) const noexcept {
+    if (lower_ == rhs.lower_) {
+      return upper_ < rhs.upper_;
+    }
+    return lower_ < rhs.lower_;
+  }
 };
 
 #endif //PROJECT_INTERVAL_HPP
