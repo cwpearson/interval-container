@@ -280,22 +280,31 @@ std::pair<iterator, bool> insert_split(const key_type &k) {
     // find largest endpoint facing +1 lt kLowerEnd
     auto smaller = newL;
     if (smaller != map_.begin()) {
-      inserted = true;
       smaller--;
       if (smaller->first.second == 1) { // truncate existing interval
-         smaller->second->set_upper(k.lower());
+        auto oldP = smaller->second;
+        ptr_type newP = ptr_type(new key_type(*oldP));
+        newP->set_upper(k.lower());
+         inserted = true;
+         std::cerr << "patching " << smaller->second->lower() << " " << smaller->second->upper() << "\n";
+         smaller->second = newP;
          map_.insert(std::make_pair(make_upper(k.lower()), smaller->second));
+         std::cerr << "into " << smaller->second->lower() << " " << smaller->second->upper() << "\n";
       }
     }
 
     // find smallest endpoint facing -1 gt kUpperEnd
-    auto bigger = newU;
-    ++bigger;
+    auto bigger = map_.upper_bound(kUpperEnd);
     if (bigger != map_.end() ) {
       if (bigger->first.second == -1) { // truncate existing interval
          inserted = true;
-         bigger->second->set_lower(k.upper());
+         auto oldP = bigger->second;
+         ptr_type newP = ptr_type(new key_type(*oldP));
+         newP->set_lower(k.upper());
+         std::cerr << "patching " << bigger->second->lower() << " " << bigger->second->upper() << "\n";
+         bigger->second = newP;
          map_.insert(std::make_pair(make_lower(k.upper()), bigger->second));
+         std::cerr << "into " << bigger->second->lower() << " " << bigger->second->upper() << "\n";
       }
     }
 
