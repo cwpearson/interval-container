@@ -27,11 +27,28 @@ class IntervalSet {
 
   class iterator {
   public:
+    iterator(const map_type m, const typename map_type::iterator lb, const typename map_type::iterator &ub) : m_(m), lb_(lb), ub_(ub) {}
     RECORD &operator*() {
-      return *lb_;
+      return *(lb_->second);
+    }
+    bool operator==(const iterator &rhs) const noexcept {
+      return lb_ == rhs.lb_ && ub_ == rhs.ub_;
+    }
+    bool operator!=(const iterator &rhs) const noexcept {
+      return ! operator==(rhs);
     }
 
+    iterator &operator++() {
+      lb_++;
+      lb_++;
+      ub_++;
+      ub_++;
+      return *this;
+    }
+
+
   private:
+    const map_type m_;
     typename map_type::iterator lb_;
     typename map_type::iterator ub_;
   };
@@ -47,20 +64,79 @@ private:
     return Endpoint(i, -1);
   }
 
-  // bool contains(const Endpoint &e) {
-  //   const auto ub = std::upper_bound(map_.begin(), map_.end(), e); // <= e, or last
+  // returns the largest element lte e
+  typename map_type::iterator lte(const Endpoint &e) {
+    auto lb = map_.lower_bound(e); // lb >= e
+    if ( lb == map_.end()) {
+      if (!map_.empty()) { // there's something in the container, but it's smaller than e. return it
+        --lb;
+        return lb;
+      }
+      return map_.end();
+    }
+    if (lb->first == e) {
+      return lb;
+    } else { // greater than e. return the first thing smaller than e
+      --lb;
+      return lb;
+    }
+  }
+
+  // returns the largest element lt e
+  typename map_type::iterator lt(const Endpoint &e) {
+    auto lb = map_.lower_bound(e); // lb >= e
+    if ( lb == map_.end()) {
+      if (!map_.empty()) { // there's something in the container, but it's smaller than e. return it
+        --lb;
+        return lb;
+      }
+      return map_.end();
+    }
+    --lb;
+    return lb;
+
+  }
+
+  iterator find(const Endpoint &e) {
+    auto lteI = lte(e);
+    auto gtI = map_.upper_bound(e);
+
+    if (lteI == map_.end()) {
+      return end();
+    }
+    if (gtI == map_.end()) {
+      return end();
+    }
+    if (lteI->first.second == 1 && gtI->first.second == -1) {
+      return iterator(map_,lteI, gtI);
+    } else {
+      return end();
+    }
+
+  }
+
+  iterator find_between(const Endpoint &l, const Endpoint &u) {
+    std::cerr << "(find_between)\n";
+    auto ltI = lte(u);
+    auto gteI = map_.lower_bound(l);
 
 
 
-  //   const auto lb = std::lower_bound(map_.begin(), map_.end(), e); // >= e, or last
+    if (ltI == map_.end()) {
+      return end();
+    }
+    if (gteI == map_.end()) {
+      return end();
+    }
+    if (gteI->first.second == 1 && ltI->first.second == -1) {
+      return iterator(map_, gteI, ltI);
+    } else {
+      return end();
+    }
 
-  //   if (ub != map_.end() && ub.second == 1) { // ub <= e exists
-  //     if (lb != map_.end() && lb != e && lb.second == -1) { // lb > e exists
-  //       return true;
-  //     }
-  //   }
-  //   return false;
-  // }
+  }
+
+
 // return if lower is <= e and upper end is > e
   typename map_type::iterator enclosed_by_lower(const Endpoint &e) {
 
@@ -161,17 +237,30 @@ public:
 }
 
 
+iterator end() {
+  return iterator(map_, map_.end(), map_.end());
+}
 
+iterator find(const key_type &k) {
 
+  const auto kUpperEnd = make_upper(k.upper());
+  const auto kLowerEnd = make_lower(k.lower());
 
+  auto lowerInt = find(kLowerEnd); // interval containing lower end
+  if (lowerInt != end()) {
+    return lowerInt;
+  }
+  auto upperInt = find(kUpperEnd); // interval containing upper end
+  if (upperInt != end()) {
+    return upperInt;
+  }
 
-iterator find(const value_type &val) {
-  auto lb = val.lower();
-  auto ub = val.upper();
+  return find_between(kLowerEnd, kUpperEnd);
+
 }
 
 size_type erase(const value_type &val) {
-
+  assert(0);
 }
 
 static Endpoint lower_endpoint(int64_t i) {
