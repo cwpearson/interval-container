@@ -5,20 +5,19 @@
 #ifndef INTERVAL_CONTAINER_INTERVAL_SET_HPP
 #define INTERVAL_CONTAINER_INTERVAL_SET_HPP
 
-#include <utility>
+#include <algorithm>
+#include <cassert>
+#include <iostream>
 #include <map>
 #include <memory>
-#include <algorithm>
-#include <iostream>
-#include <cassert>
+#include <utility>
 #include <vector>
 
 typedef int Direction;
 
 // INTERVAL must have ::pos_type, type lower(), type upper(), bool operator<()
 // When intervals overlap, they are joined
-template<typename INTERVAL>
-class IntervalSet {
+template <typename INTERVAL> class IntervalSet {
   typedef INTERVAL key_type;
   typedef size_t size_type;
   typedef std::shared_ptr<INTERVAL> ptr_type;
@@ -27,16 +26,20 @@ class IntervalSet {
 
   class iterator {
     friend class IntervalSet;
+
   public:
-    iterator(const typename map_type::iterator lb, const typename map_type::iterator &ub) : lb_(lb), ub_(ub) {}
-    const INTERVAL &operator*() { // FIXME - const?
-      return *(lb_->second);
+    iterator(const typename map_type::iterator lb,
+             const typename map_type::iterator &ub)
+        : lb_(lb), ub_(ub) {}
+    const ptr_type &operator*() { // FIXME - const?
+      return lb_->second;
     }
+    const typename map_type::iterator operator->() { return lb_; }
     bool operator==(const iterator &rhs) const noexcept {
       return lb_ == rhs.lb_ && ub_ == rhs.ub_;
     }
     bool operator!=(const iterator &rhs) const noexcept {
-      return ! operator==(rhs);
+      return !operator==(rhs);
     }
 
     iterator &operator++() {
@@ -46,7 +49,6 @@ class IntervalSet {
       ub_++;
       return *this;
     }
-
 
   private:
     typename map_type::iterator lb_;
@@ -60,15 +62,16 @@ private:
     return Endpoint(i, 1);
   }
 
-    static Endpoint make_upper(const typename INTERVAL::pos_type &i) {
+  static Endpoint make_upper(const typename INTERVAL::pos_type &i) {
     return Endpoint(i, -1);
   }
 
   // returns the largest element lte e
   typename map_type::iterator lte(const Endpoint &e) {
     auto lb = map_.lower_bound(e); // lb >= e
-    if ( lb == map_.end()) {
-      if (!map_.empty()) { // there's something in the container, but it's smaller than e. return it
+    if (lb == map_.end()) {
+      if (!map_.empty()) { // there's something in the container, but it's
+                           // smaller than e. return it
         --lb;
         return lb;
       }
@@ -85,8 +88,9 @@ private:
   // returns the largest element lt e
   typename map_type::iterator lt(const Endpoint &e) {
     auto lb = map_.lower_bound(e); // lb >= e
-    if ( lb == map_.end()) {
-      if (!map_.empty()) { // there's something in the container, but it's smaller than e. return it
+    if (lb == map_.end()) {
+      if (!map_.empty()) { // there's something in the container, but it's
+                           // smaller than e. return it
         --lb;
         return lb;
       }
@@ -94,10 +98,7 @@ private:
     }
     --lb;
     return lb;
-
   }
-
-
 
   iterator find(const Endpoint &e) {
     auto lteI = lte(e);
@@ -114,10 +115,7 @@ private:
     } else {
       return end();
     }
-
   }
-
-
 
   iterator find_between(const Endpoint &l, const Endpoint &u) {
     auto ltI = lte(u);
@@ -130,16 +128,15 @@ private:
       return end();
     }
 
-    if (gteI->first.second == 1 && ltI->first.second == -1) {
+    if (gteI->first < u && gteI->first.second == 1 && ltI->first.second == -1) {
+      std::cerr << "here\n";
       return iterator(gteI, ltI);
     } else {
       return end();
     }
-
   }
 
-
-// return if lower is <= e and upper end is > e
+  // return if lower is <= e and upper end is > e
   typename map_type::iterator enclosed_by_lower(const Endpoint &e) {
 
     std::cerr << "Looking for lower of " << e.first << "\n";
@@ -170,22 +167,28 @@ private:
   }
 
 public:
-  size_type size() const { assert(map_.size() % 2 == 0); return map_.size() / 2; }
+  size_type size() const {
+    assert(map_.size() % 2 == 0);
+    return map_.size() / 2;
+  }
 
   std::pair<iterator, bool> insert_join(const key_type &k) {
 
-    // std::cerr << "(insert_join) current map:\n";
-    // int cnt = 0;
-    // for (const auto &i : map_) {
-    //   std::cerr << i.first.first << "(" << i.first.second << ") ";
-    //   if (cnt++ %2) std::cerr <<"\n";
-    // }
+    std::cerr << "(insert_join) current map:\n";
+    int cnt = 0;
+    for (const auto &i : map_) {
+      std::cerr << i.first.first << "(" << i.first.second << ") ";
+      if (cnt++ % 2)
+        std::cerr << "\n";
+    }
 
     const auto kUpperEnd = make_upper(k.upper());
     const auto kLowerEnd = make_lower(k.lower());
 
-    auto small = map_.insert(std::make_pair(kLowerEnd, ptr_type(nullptr))).first;
-    auto large = map_.insert(std::make_pair(kUpperEnd, ptr_type(nullptr))).first;
+    auto small =
+        map_.insert(std::make_pair(kLowerEnd, ptr_type(nullptr))).first;
+    auto large =
+        map_.insert(std::make_pair(kUpperEnd, ptr_type(nullptr))).first;
 
     // std::cerr << "inserted\n";
 
@@ -208,7 +211,6 @@ public:
         large = larger;
       }
     }
-  
 
     // std::cerr << "large = " << large->first.first << "\n";
     bool inserted = false;
@@ -239,7 +241,7 @@ public:
     while (++small != large) {
       toErase.push_back(small);
     }
-    
+
     for (const auto &i : toErase) {
       // std::cerr << "erasing " << i->first.first << "\n";
       map_.erase(i);
@@ -247,16 +249,17 @@ public:
     assert(map_.size() % 2 == 0);
 
     return std::make_pair(res, inserted);
-}
+  }
 
-std::pair<iterator, bool> insert_split(const key_type &k) {
+  std::pair<iterator, bool> insert_split(const key_type &k) {
 
-      std::cerr << "(insert_split) current map:\n";
-    int cnt = 0;
-    for (const auto &i : map_) {
-      std::cerr << i.first.first << "(" << i.first.second << ") ";
-      if (cnt++ %2) std::cerr <<"\n";
-    }
+    // std::cerr << "(insert_split) current map:\n";
+    // int cnt = 0;
+    // for (const auto &i : map_) {
+    //   std::cerr << i.first.first << "(" << i.first.second << ") ";
+    //   if (cnt++ % 2)
+    //     std::cerr << "\n";
+    // }
 
     const auto kUpperEnd = make_upper(k.upper());
     const auto kLowerEnd = make_lower(k.lower());
@@ -276,9 +279,6 @@ std::pair<iterator, bool> insert_split(const key_type &k) {
       newU->second->set_upper(k.upper());
     }
 
-
-
-
     bool inserted = false;
 
     // find largest endpoint facing +1 lt kLowerEnd
@@ -289,26 +289,30 @@ std::pair<iterator, bool> insert_split(const key_type &k) {
         auto oldP = smaller->second;
         ptr_type newP = ptr_type(new key_type(*oldP));
         newP->set_upper(k.lower());
-         inserted = true;
-         std::cerr << "patching " << smaller->second->lower() << " " << smaller->second->upper() << "\n";
-         smaller->second = newP;
-         map_.insert(std::make_pair(make_upper(k.lower()), smaller->second));
-         std::cerr << "into " << smaller->second->lower() << " " << smaller->second->upper() << "\n";
+        inserted = true;
+        // std::cerr << "patching " << smaller->second->lower() << " "
+        //           << smaller->second->upper() << "\n";
+        smaller->second = newP;
+        map_.insert(std::make_pair(make_upper(k.lower()), smaller->second));
+        // std::cerr << "into " << smaller->second->lower() << " "
+        //           << smaller->second->upper() << "\n";
       }
     }
 
     // find smallest endpoint facing -1 gt kUpperEnd
     auto bigger = map_.upper_bound(kUpperEnd);
-    if (bigger != map_.end() ) {
+    if (bigger != map_.end()) {
       if (bigger->first.second == -1) { // truncate existing interval
-         inserted = true;
-         auto oldP = bigger->second;
-         ptr_type newP = ptr_type(new key_type(*oldP));
-         newP->set_lower(k.upper());
-         std::cerr << "patching " << bigger->second->lower() << " " << bigger->second->upper() << "\n";
-         bigger->second = newP;
-         map_.insert(std::make_pair(make_lower(k.upper()), bigger->second));
-         std::cerr << "into " << bigger->second->lower() << " " << bigger->second->upper() << "\n";
+        inserted = true;
+        auto oldP = bigger->second;
+        ptr_type newP = ptr_type(new key_type(*oldP));
+        newP->set_lower(k.upper());
+        std::cerr << "patching " << bigger->second->lower() << " "
+                  << bigger->second->upper() << "\n";
+        bigger->second = newP;
+        map_.insert(std::make_pair(make_lower(k.upper()), bigger->second));
+        std::cerr << "into " << bigger->second->lower() << " "
+                  << bigger->second->upper() << "\n";
       }
     }
 
@@ -319,67 +323,69 @@ std::pair<iterator, bool> insert_split(const key_type &k) {
     while (++newL != newU) {
       toErase.push_back(newL);
     }
-    
+
     for (const auto &i : toErase) {
       std::cerr << "erasing " << i->first.first << "\n";
       map_.erase(i);
     }
     assert(map_.size() % 2 == 0);
 
+    return std::make_pair(res, inserted);
+  }
 
-  return std::make_pair(res, inserted); 
-}
-
-iterator end() {
-  return iterator(map_.end(), map_.end());
-}
+  iterator end() { return iterator(map_.end(), map_.end()); }
 
   iterator find(const typename INTERVAL::pos_type &p) {
     return find(make_lower(p));
   }
 
-iterator find(const key_type &k) {
+  iterator find(const typename INTERVAL::pos_type &pos, const size_t size) {
+    const auto kLowerEnd = make_lower(pos);
+    const auto kUpperEnd = make_upper(pos + size);
+    return find(kLowerEnd, kUpperEnd);
+  }
 
-      std::cerr << "(find) current map:\n";
+  iterator find(const Endpoint &l, const Endpoint &u) {
+    auto lowerInt = find(l); // interval containing lower end
+    if (lowerInt != end()) {
+      return lowerInt;
+    }
+    auto upperInt = find(u); // interval containing upper end
+    if (upperInt != end()) {
+      return upperInt;
+    }
+    return find_between(l, u);
+  }
+
+  iterator find(const key_type &k) {
+
+    std::cerr << "(find) current map:\n";
     int cnt = 0;
     for (const auto &i : map_) {
       std::cerr << i.first.first << "(" << i.first.second << ") ";
-      if (cnt++ %2) std::cerr <<"\n";
+      if (cnt++ % 2)
+        std::cerr << "\n";
     }
 
-  assert(map_.size() % 2 == 0);
-
-  const auto kUpperEnd = make_upper(k.upper());
-  const auto kLowerEnd = make_lower(k.lower());
-
-  auto lowerInt = find(kLowerEnd); // interval containing lower end
-  if (lowerInt != end()) {
-    return lowerInt;
-  }
-  auto upperInt = find(kUpperEnd); // interval containing upper end
-  if (upperInt != end()) {
-    return upperInt;
+    // Convert to endpoints and defer
+    assert(map_.size() % 2 == 0);
+    const auto kUpperEnd = make_upper(k.upper());
+    const auto kLowerEnd = make_lower(k.lower());
+    return find(kLowerEnd, kUpperEnd);
   }
 
-  return find_between(kLowerEnd, kUpperEnd);
-}
-
-size_type erase(const key_type &k) {
-  auto i = find(k);
-  if (i != end()) {
-    map_.erase(i.lb_);
-    map_.erase(i.ub_);
-    return 1;
+  size_type erase(const key_type &k) {
+    auto i = find(k);
+    if (i != end()) {
+      map_.erase(i.lb_);
+      map_.erase(i.ub_);
+      return 1;
+    }
+    return 0;
   }
-  return 0;
-}
 
-static Endpoint lower_endpoint(int64_t i) {
-  return Endpoint(i, 1);
-}
-static Endpoint upper_endpoint(int64_t i) {
-  return Endpoint(i, -1);
-}
+  static Endpoint lower_endpoint(int64_t i) { return Endpoint(i, 1); }
+  static Endpoint upper_endpoint(int64_t i) { return Endpoint(i, -1); }
 };
 
-#endif //INTERVAL_CONTAINER_INTERVAL_SET_HPP
+#endif // INTERVAL_CONTAINER_INTERVAL_SET_HPP
